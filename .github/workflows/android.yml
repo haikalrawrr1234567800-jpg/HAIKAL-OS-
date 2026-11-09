@@ -4,41 +4,59 @@ name: Build HAIKAL OS
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
 
       - name: Extract HAIKAL OS
         run: |
-          ZIP_FILE=$(find . -type f -iname '*.zip' | head -n 1)
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
+
           if [ -z "$ZIP_FILE" ]; then
-            echo "ZIP project not found"
+            echo "HAIKAL OS ZIP not found!"
             exit 1
           fi
+
           mkdir -p project
           unzip -o "$ZIP_FILE" -d project
 
-      
       - name: Find Gradle project
         run: |
           BUILD_DIR=$(find project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -printf '%h\n' | head -n 1)
+
           if [ -z "$BUILD_DIR" ]; then
             echo "Gradle settings file not found!"
+            find project -type f
             exit 1
           fi
+
           echo "PROJECT_DIR=$BUILD_DIR" >> "$GITHUB_ENV"
           echo "Found project at $BUILD_DIR"
+
+      - name: Build APK
+        run: gradle -p "$PROJECT_DIR" assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HAIKAL-OS-APK
+          path: "${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk"
+          if-no-files-found: error
