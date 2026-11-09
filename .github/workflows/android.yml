@@ -32,21 +32,13 @@ jobs:
           mkdir -p project
           unzip -o "$ZIP_FILE" -d project
 
+      
       - name: Find Gradle project
         run: |
-          BUILD_DIR=$(find project -type f -name settings.gradle.kts -printf '%h\n' | head -n 1)
+          BUILD_DIR=$(find project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -printf '%h\n' | head -n 1)
           if [ -z "$BUILD_DIR" ]; then
-            echo "settings.gradle.kts not found!"
-            find project -type f
+            echo "Gradle settings file not found!"
             exit 1
           fi
           echo "PROJECT_DIR=$BUILD_DIR" >> "$GITHUB_ENV"
           echo "Found project at $BUILD_DIR"
-
-      - name: Build APK
-        run: gradle -p "$PROJECT_DIR" assembleDebug
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: HAIKAL-OS-APK
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
