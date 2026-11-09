@@ -1,3 +1,4 @@
+
 name: Build HAIKAL OS
 
 on:
@@ -23,7 +24,7 @@ jobs:
 
       - name: Extract HAIKAL OS
         run: |
-          ZIP_FILE=$(find . -maxdepth 1 -iname '*.zip' -type f | head -n 1)
+          ZIP_FILE=$(find . -type f -iname '*.zip' | head -n 1)
           if [ -z "$ZIP_FILE" ]; then
             echo "ZIP project not found"
             exit 1
@@ -31,10 +32,21 @@ jobs:
           mkdir -p project
           unzip -o "$ZIP_FILE" -d project
 
+      - name: Find Gradle project
+        run: |
+          BUILD_DIR=$(find project -type f -name settings.gradle.kts -printf '%h\n' | head -n 1)
+          if [ -z "$BUILD_DIR" ]; then
+            echo "settings.gradle.kts not found!"
+            find project -type f
+            exit 1
+          fi
+          echo "PROJECT_DIR=$BUILD_DIR" >> "$GITHUB_ENV"
+          echo "Found project at $BUILD_DIR"
+
       - name: Build APK
-        run: gradle -p project assembleDebug
+        run: gradle -p "$PROJECT_DIR" assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
           name: HAIKAL-OS-APK
-          path: project/app/build/outputs/apk/debug/*.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
