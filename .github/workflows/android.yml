@@ -8,11 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Extract project
-        run: unzip -o HAIKAL_OS_Android_Project.zip -d .
 
       - uses: actions/setup-java@v4
         with:
@@ -23,10 +21,20 @@ jobs:
         with:
           gradle-version: 8.9
 
+      - name: Extract HAIKAL OS
+        run: |
+          ZIP_FILE=$(find . -maxdepth 1 -iname '*.zip' -type f | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ZIP project not found"
+            exit 1
+          fi
+          mkdir -p project
+          unzip -o "$ZIP_FILE" -d project
+
       - name: Build APK
-        run: gradle assembleDebug
+        run: gradle -p project assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
           name: HAIKAL-OS-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: project/app/build/outputs/apk/debug/*.apk
